@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VR Control">
+<meta name="theme-color" content="#0a0a0a">
+<title>VR Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #131313;
+    --surface2: #1c1c1c;
+    --border: rgba(255,255,255,0.08);
+    --border-hi: rgba(255,255,255,0.18);
+    --accent: #e8ff47;
+    --accent-dim: rgba(232,255,71,0.12);
+    --accent-dim2: rgba(232,255,71,0.06);
+    --text: #f0f0f0;
+    --text-muted: #666;
+    --text-dim: #999;
+    --red: #ff4d4d;
+    --green: #4dff91;
+    --orange: #ff9a3c;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+    overflow-x: hidden;
+  }
+
+  /* ── Cabecera ── */
+  header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: var(--safe-top);
+    background: var(--bg);
+    z-index: 10;
+  }
+  .logo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .logo-title {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .logo-title span { color: var(--accent); }
+  .logo-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .net-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 5px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border-hi);
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .net-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: blink 2s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── Main ── */
+  main { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* ── Sección ── */
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .count-badge {
+    background: var(--accent-dim);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+  }
+
+  /* ── Escaneo ── */
+  .scan-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .scan-ring {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-hi);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .scan-ring::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    opacity: 0;
+  }
+  .scan-ring.scanning::before {
+    animation: ripple 1.2s ease-out infinite;
+  }
+  @keyframes ripple {
+    0% { transform: scale(0.8); opacity: 0.6; }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+  .scan-icon {
+    font-size: 28px;
+    filter: grayscale(0.3);
+  }
+  .scan-btn {
+    background: var(--accent);
+    color: #0a0a0a;
+    border: none;
+    border-radius: 12px;
+    padding: 13px 28px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: transform 0.1s, opacity 0.1s;
+    width: 100%;
+  }
+  .scan-btn:active { transform: scale(0.97); opacity: 0.85; }
+  .scan-btn:disabled { background: var(--surface2); color: var(--text-muted); cursor: not-allowed; transform: none; }
+  .scan-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .scan-status.scanning { color: var(--accent); }
+
+  /* ── Lista de headsets ── */
+  #headset-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .headset-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .headset-item:active { transform: scale(0.98); }
+  .headset-item.selected {
+    border-color: var(--accent);
+    background: var(--accent-dim2);
+  }
+  .headset-avatar {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border-hi);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .headset-item.selected .headset-avatar {
+    background: var(--accent-dim);
+    border-color: rgba(232,255,71,0.3);
+  }
+  .headset-info { flex: 1; min-width: 0; }
+  .headset-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .headset-ip {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .headset-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 4px;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.online { background: var(--green); }
+  .status-dot.connecting { background: var(--orange); animation: blink 1s infinite; }
+  .status-dot.error { background: var(--red); }
+  .status-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .check-circle {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-hi);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .headset-item.selected .check-circle {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .check-svg { display: none; }
+  .headset-item.selected .check-svg { display: block; }
+
+  /* ── Estado vacío ── */
+  .empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--text-muted);
+  }
+  .empty-state p { font-size: 13px; line-height: 1.6; }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* ── Barra de selección ── */
+  .selection-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sel-info {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .sel-info strong { color: var(--text); }
+  .sel-all-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .sel-all-btn:active { background: var(--accent-dim); }
+
+  /* ── Botón principal LAUNCH ── */
+  .launch-wrap {
+    position: sticky;
+    bottom: calc(var(--safe-bottom) + 16px);
+  }
+  .launch-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #0a0a0a;
+    border: none;
+    border-radius: 16px;
+    padding: 18px;
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: transform 0.1s, opacity 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+  .launch-btn:active { transform: scale(0.97); }
+  .launch-btn:disabled {
+    background: var(--surface2);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    transform: none;
+  }
+  .launch-btn .progress {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 0%;
+    background: rgba(0,0,0,0.15);
+    transition: width 1.8s linear;
+  }
+  .launch-btn .btn-content {
+    position: relative;
+    z-index: 1;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .launch-icon { font-size: 18px; }
+
+  /* ── Log ── */
+  .log-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    line-height: 1.8;
+    max-height: 130px;
+    overflow-y: auto;
+  }
+  .log-line { color: var(--text-muted); }
+  .log-line.ok { color: var(--green); }
+  .log-line.err { color: var(--red); }
+  .log-line.info { color: var(--accent); }
+  .log-line.send { color: var(--orange); }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: calc(var(--safe-bottom) + 100px);
+    left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border-hi);
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 100;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: var(--green); color: var(--green); }
+  #toast.error { border-color: var(--red); color: var(--red); }
+
+  /* ── Instrucciones de instalación PWA ── */
+  #pwa-banner {
+    background: var(--accent-dim);
+    border: 1px solid rgba(232,255,71,0.25);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .pwa-icon { font-size: 20px; flex-shrink: 0; }
+  .pwa-text { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); line-height: 1.7; }
+  .pwa-close {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 16px; cursor: pointer; flex-shrink: 0; padding: 0 4px;
+    align-self: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-title">VR<span>Control</span></div>
+    <div class="logo-sub">Quest 3 · Sistema de control</div>
+  </div>
+  <div class="net-badge">
+    <div class="net-dot"></div>
+    <span id="net-label">WiFi</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- Banner instalación PWA (solo Safari iOS) -->
+  <div id="pwa-banner" style="display:none;">
+    <div class="pwa-icon">📲</div>
+    <div class="pwa-text">
+      Para instalar: pulsa <strong>Compartir</strong> en Safari
+      y luego <strong>"Añadir a pantalla de inicio"</strong>
+    </div>
+    <button class="pwa-close" onclick="document.getElementById('pwa-banner').style.display='none'">✕</button>
+  </div>
+
+  <!-- Escaneo -->
+  <div>
+    <div class="section-label">Buscar headsets</div>
+    <div class="scan-area">
+      <div class="scan-ring" id="scan-ring">
+        <div class="scan-icon">🥽</div>
+      </div>
+      <div class="scan-status" id="scan-status">Pulsa para buscar Quest 3 en la red WiFi</div>
+      <button class="scan-btn" id="scan-btn" onclick="startScan()">Buscar headsets</button>
+    </div>
+  </div>
+
+  <!-- Lista headsets -->
+  <div>
+    <div class="section-label">
+      Headsets detectados
+      <span class="count-badge" id="count-badge">0</span>
+    </div>
+    <div id="headset-list">
+      <div class="empty-state">
+        <div class="empty-icon">📡</div>
+        <p>Todavía no hay headsets.<br>Pulsa "Buscar headsets" para escanear la red.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra selección -->
+  <div class="selection-bar" id="sel-bar" style="display:none;">
+    <div class="sel-info">Seleccionadas: <strong id="sel-count">0</strong> gafas</div>
+    <button class="sel-all-btn" onclick="toggleAll()">Seleccionar todas</button>
+  </div>
+
+  <!-- Log -->
+  <div>
+    <div class="section-label">Registro</div>
+    <div class="log-box" id="log">
+      <div class="log-line info">▸ Sistema listo.</div>
+    </div>
+  </div>
+
+  <!-- Botón launch -->
+  <div class="launch-wrap">
+    <button class="launch-btn" id="launch-btn" disabled onclick="sendFadeout()">
+      <div class="progress" id="launch-progress"></div>
+      <div class="btn-content">
+        <span class="launch-icon">▶</span>
+        <span id="launch-label">Iniciar vídeo 360</span>
+      </div>
+    </button>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ── Estado ──────────────────────────────────────────────────────────
+const headsets = [];         // { name, ip, port, ws, status, selected }
+let scanning = false;
+let launching = false;
+
+// ── Inicialización ──────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  // Mostrar banner PWA solo en Safari iOS si no está instalada como app
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone;
+  if (isIOS && !isStandalone) {
+    document.getElementById('pwa-banner').style.display = 'flex';
+  }
+  addLog('▸ App lista. Conecta al mismo WiFi que las Quest.', 'info');
+});
+
+// ── Escaneo de headsets ─────────────────────────────────────────────
+// Estrategia: intenta conectar WebSocket a cada IP del rango .1–.254
+// en el puerto 7777. Las Quest responden con STATUS → READY|nombre.
+// En producción esto se complementa con el beacon UDP del script de Unity,
+// pero como el navegador no puede UDP, aquí hacemos TCP scan.
+
+async function startScan() {
+  if (scanning) return;
+  scanning = true;
+
+  document.getElementById('scan-btn').disabled = true;
+  document.getElementById('scan-btn').textContent = 'Buscando...';
+  document.getElementById('scan-ring').classList.add('scanning');
+  document.getElementById('scan-status').className = 'scan-status scanning';
+  document.getElementById('scan-status').textContent = 'Escaneando red…';
+  addLog('▸ Iniciando escaneo de red…', 'info');
+
+  // Limpiar lista anterior
+  headsets.length = 0;
+  renderList();
+
+  // Detectar subred propia
+  // Como el navegador no expone la IP local directamente,
+  // escaneamos el rango más común de routers domésticos/comerciales.
+  const subnets = ['192.168.1', '192.168.0', '10.0.0', '10.0.1'];
+  const port = 7777;
+  const timeout = 800; // ms por intento
+
+  let found = 0;
+  const promises = [];
+
+  for (const subnet of subnets) {
+    for (let i = 1; i <= 254; i++) {
+      const ip = `${subnet}.${i}`;
+      promises.push(probeHost(ip, port, timeout));
+    }
+  }
+
+  // Lanzar en paralelo con límite de concurrencia
+  await runConcurrent(promises, 40);
+
+  scanning = false;
+  document.getElementById('scan-btn').disabled = false;
+  document.getElementById('scan-btn').textContent = 'Buscar de nuevo';
+  document.getElementById('scan-ring').classList.remove('scanning');
+
+  if (headsets.length > 0) {
+    document.getElementById('scan-status').className = 'scan-status';
+    document.getElementById('scan-status').textContent = `${headsets.length} headset${headsets.length > 1 ? 's' : ''} encontrado${headsets.length > 1 ? 's' : ''}`;
+    addLog(`✓ Escaneo completo. ${headsets.length} headset(s) detectado(s).`, 'ok');
+    showToast(`${headsets.length} Quest detectada${headsets.length>1?'s':''}`, 'success');
+  } else {
+    document.getElementById('scan-status').className = 'scan-status';
+    document.getElementById('scan-status').textContent = 'No se encontraron headsets';
+    addLog('⚠ No se encontraron headsets. ¿Están encendidas y en la misma red?', 'err');
+    showToast('No se encontraron Quest', 'error');
+  }
+}
+
+function probeHost(ip, port, timeout) {
+  return new Promise((resolve) => {
+    let ws;
+    const timer = setTimeout(() => {
+      if (ws) { try { ws.close(); } catch(e){} }
+      resolve(null);
+    }, timeout);
+
+    try {
+      ws = new WebSocket(`ws://${ip}:${port}`);
+      ws.onopen = () => {
+        ws.send('STATUS');
+      };
+      ws.onmessage = (e) => {
+        clearTimeout(timer);
+        const parts = e.data.split('|');
+        if (parts[0] === 'READY' || parts[0] === 'PONG') {
+          const name = parts[1] || `Quest-${ip.split('.').pop()}`;
+          addHeadset(name, ip, port, ws);
+        } else {
+          try { ws.close(); } catch(e){}
+        }
+        resolve(null);
+      };
+      ws.onerror = () => { clearTimeout(timer); resolve(null); };
+      ws.onclose = () => { clearTimeout(timer); resolve(null); };
+    } catch(e) {
+      clearTimeout(timer);
+      resolve(null);
+    }
+  });
+}
+
+async function runConcurrent(promises, concurrency) {
+  const results = [];
+  let i = 0;
+  async function worker() {
+    while (i < promises.length) {
+      const p = promises[i++];
+      results.push(await p);
+    }
+  }
+  const workers = Array.from({ length: Math.min(concurrency, promises.length) }, worker);
+  await Promise.all(workers);
+  return results;
+}
+
+// ── Gestión de headsets ─────────────────────────────────────────────
+function addHeadset(name, ip, port, ws) {
+  // Evitar duplicados
+  if (headsets.find(h => h.ip === ip)) return;
+
+  const h = { name, ip, port, ws, status: 'online', selected: true };
+  headsets.push(h);
+
+  ws.onclose = () => {
+    const idx = headsets.findIndex(x => x.ip === ip);
+    if (idx !== -1) {
+      headsets[idx].status = 'error';
+      renderList();
+      addLog(`⚠ ${name} desconectado`, 'err');
+    }
+  };
+
+  addLog(`✓ Detectado: ${name} (${ip}:${port})`, 'ok');
+  renderList();
+  updateLaunchBtn();
+}
+
+function renderList() {
+  const list = document.getElementById('headset-list');
+  document.getElementById('count-badge').textContent = headsets.length;
+
+  if (headsets.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📡</div>
+        <p>Todavía no hay headsets.<br>Pulsa "Buscar headsets" para escanear la red.</p>
+      </div>`;
+    document.getElementById('sel-bar').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('sel-bar').style.display = 'flex';
+  list.innerHTML = headsets.map((h, i) => `
+    <div class="headset-item ${h.selected ? 'selected' : ''}" onclick="toggleHeadset(${i})">
+      <div class="headset-avatar">🥽</div>
+      <div class="headset-info">
+        <div class="headset-name">${h.name}</div>
+        <div class="headset-ip">${h.ip}:${h.port}</div>
+        <div class="headset-status">
+          <div class="status-dot ${h.status}"></div>
+          <span class="status-text">${statusLabel(h.status)}</span>
+        </div>
+      </div>
+      <div class="check-circle">
+        <svg class="check-svg" width="11" height="9" viewBox="0 0 11 9" fill="none">
+          <path d="M1 4.5l3 3L10 1" stroke="#0a0a0a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>`).join('');
+
+  const selCount = headsets.filter(h => h.selected).length;
+  document.getElementById('sel-count').textContent = selCount;
+}
+
+function statusLabel(s) {
+  if (s === 'online') return 'En espera · XR activo';
+  if (s === 'connecting') return 'Conectando…';
+  return 'Sin conexión';
+}
+
+function toggleHeadset(i) {
+  headsets[i].selected = !headsets[i].selected;
+  renderList();
+  updateLaunchBtn();
+}
+
+function toggleAll() {
+  const anySelected = headsets.some(h => h.selected);
+  headsets.forEach(h => h.selected = !anySelected);
+  renderList();
+  updateLaunchBtn();
+}
+
+function updateLaunchBtn() {
+  const btn = document.getElementById('launch-btn');
+  const any = headsets.some(h => h.selected && h.status === 'online');
+  btn.disabled = !any || launching;
+}
+
+// ── Envío del comando fadeout ────────────────────────────────────────
+async function sendFadeout() {
+  if (launching) return;
+  const targets = headsets.filter(h => h.selected && h.status === 'online');
+  if (targets.length === 0) return;
+
+  launching = true;
+  updateLaunchBtn();
+
+  const btn = document.getElementById('launch-btn');
+  const label = document.getElementById('launch-label');
+  const progress = document.getElementById('launch-progress');
+
+  label.textContent = `Enviando a ${targets.length} Quest…`;
+  progress.style.width = '0%';
+  setTimeout(() => progress.style.width = '100%', 30);
+
+  addLog(`▸ Enviando FADEOUT_START a: ${targets.map(h=>h.name).join(', ')}`, 'send');
+
+  const results = await Promise.allSettled(targets.map(h => sendToHeadset(h)));
+
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled' && r.value) {
+      addLog(`✓ ${targets[i].name} confirmado`, 'ok');
+    } else {
+      addLog(`✗ ${targets[i].name} sin respuesta`, 'err');
+      headsets.find(h => h.ip === targets[i].ip).status = 'error';
+    }
+  });
+
+  renderList();
+
+  const ok = results.filter(r => r.status === 'fulfilled' && r.value).length;
+  const fail = results.length - ok;
+
+  if (ok > 0 && fail === 0) {
+    label.textContent = `✓ ${ok} Quest iniciadas`;
+    showToast('Vídeo iniciado en todas las Quest', 'success');
+  } else if (ok > 0) {
+    label.textContent = `✓ ${ok} ok · ${fail} error`;
+    showToast(`${ok} ok, ${fail} sin respuesta`, '');
+  } else {
+    label.textContent = 'Sin respuesta';
+    showToast('No respondieron las Quest', 'error');
+  }
+
+  setTimeout(() => {
+    progress.style.transition = 'none';
+    progress.style.width = '0%';
+    setTimeout(() => { progress.style.transition = 'width 1.8s linear'; }, 50);
+    label.textContent = 'Iniciar vídeo 360';
+    launching = false;
+    updateLaunchBtn();
+  }, 3000);
+}
+
+function sendToHeadset(h) {
+  return new Promise((resolve) => {
+    const timeoutId = setTimeout(() => resolve(false), 3000);
+
+    if (!h.ws || h.ws.readyState !== WebSocket.OPEN) {
+      // Reconectar
+      try {
+        h.ws = new WebSocket(`ws://${h.ip}:${h.port}`);
+        h.ws.onopen = () => {
+          h.ws.send('FADEOUT_START');
+        };
+        h.ws.onmessage = (e) => {
+          clearTimeout(timeoutId);
+          resolve(e.data.startsWith('ACK'));
+        };
+        h.ws.onerror = () => { clearTimeout(timeoutId); resolve(false); };
+      } catch(e) {
+        clearTimeout(timeoutId);
+        resolve(false);
+      }
+    } else {
+      h.ws.onmessage = (e) => {
+        clearTimeout(timeoutId);
+        resolve(e.data.startsWith('ACK'));
+      };
+      h.ws.send('FADEOUT_START');
+    }
+  });
+}
+
+// ── Utilidades ──────────────────────────────────────────────────────
+function addLog(msg, cls = '') {
+  const log = document.getElementById('log');
+  const d = document.createElement('div');
+  d.className = 'log-line ' + cls;
+  d.textContent = msg;
+  log.appendChild(d);
+  if (log.children.length > 50) log.removeChild(log.firstChild);
+  log.scrollTop = log.scrollHeight;
+}
+
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 2800);
+}
+</script>
+</body>
+</html>
